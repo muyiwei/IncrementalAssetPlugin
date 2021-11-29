@@ -1,21 +1,22 @@
 const path = require('path');
 const fsExtra = require('fs-extra');
 const fs = require('fs');
-
+const projectRootPath = process.cwd()
 class IncrementalAssetPlugin {
   preAssetList = [];
   path = '';
-  constructor(outPath, targetPath) {
+  constructor(outPath, targetPath, publicPath) {
     try {
-      this.path = path.resolve(__dirname, targetPath);
+      this.path = path.resolve(projectRootPath, targetPath);
       this.preAssetList = Object.values(
         JSON.parse(
           fs.readFileSync(
-            path.resolve(__dirname, outPath, 'manifest.json'),
+            path.resolve(projectRootPath, outPath, 'manifest.json'),
             'utf-8'
           )
         )
       ).map((file) => {
+        file = file.replace(publicPath, '');
         if (file.startsWith('/')) {
           return file.replace('/', '');
         }
@@ -23,7 +24,7 @@ class IncrementalAssetPlugin {
       });
     } catch (e) {
       this.preAssetList = [];
-      console.error('请配合 webpack-manifest-plugin 使用');
+      console.error('请配合 webpack-manifest-plugin 使用',e);
     }
   }
   apply(compiler) {
@@ -33,6 +34,7 @@ class IncrementalAssetPlugin {
       fsExtra.removeSync(this.path);
       fsExtra.copySync(outPutPath, this.path);
       let files = compilation.assetsInfo.keys();
+      console.log(this.path, '----------------------------', outPutPath);
       for (let file of files) {
         if (this.preAssetList.includes(file)) {
           console.log(file);
@@ -43,4 +45,4 @@ class IncrementalAssetPlugin {
     });
   }
 }
-export default IncrementalAssetPlugin;
+module.exports = IncrementalAssetPlugin;
